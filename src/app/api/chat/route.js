@@ -51,7 +51,7 @@ ${conversationStr}
 SYSTEM: Please answer the user's last message above appropriately as the MODEL. Provide helpful markdown formatting if needed. Do not include the "MODEL:" prefix in your response.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
     });
     
