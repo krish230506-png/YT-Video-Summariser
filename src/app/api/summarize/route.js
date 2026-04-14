@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { YoutubeTranscript } from 'youtube-transcript';
 import { GoogleGenAI } from '@google/genai';
 
+// Diagnostic check to let you see if the new key is loaded without costing any usage
+const key = process.env.GEMINI_API_KEY;
+if (key) {
+  console.log(`✅ Server loaded API Key successfully! Starts with: ${key.substring(0, 10)}... Length: ${key.length}`);
+} else {
+  console.error(`❌ NO API KEY DETECTED IN ENVIRONMENT`);
+}
+
 export async function POST(req) {
   try {
     const { url, language = "English" } = await req.json();
@@ -17,23 +25,41 @@ export async function POST(req) {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 
-    let transcriptItems = [];
+    if (!process.env.RAPIDAPI_KEY) {
+      return NextResponse.json({ error: 'RapidAPI Key is missing. Please add RAPIDAPI_KEY to your .env.local file.' }, { status: 500 });
+    }
+
+    let fullTranscript = '';
     try {
-      // Extract video ID if it's a full URL
-      const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-      const targetId = videoIdMatch ? videoIdMatch[1] : url;
+      console.log(`Fetching transcript via RapidAPI for: ${url}`);
+      const options = {
+        method: 'GET',
+        headers: {
+          'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+          'x-rapidapi-host': 'youtube-transcript3.p.rapidapi.com'
+        }
+      };
       
-      console.log(`Fetching transcript for video ID: ${targetId}`);
-      transcriptItems = await YoutubeTranscript.fetchTranscript(targetId);
+      const res = await fetch(`https://youtube-transcript3.p.rapidapi.com/api/transcript-with-url?url=${encodeURIComponent(url)}&flat=true&lang=en`, options);
+      const data = await res.json();
+      
+      if (Array.isArray(data)) {
+        fullTranscript = data.map(item => item.text || item).join(' ');
+      } else if (data.transcript && Array.isArray(data.transcript)) {
+        fullTranscript = data.transcript.map(item => item.text || item.title || '').join(' ');
+      } else if (typeof data === 'string') {
+        fullTranscript = data;
+      } else {
+        fullTranscript = JSON.stringify(data); // Fallback
+      }
+
     } catch (e) {
-      console.error("Transcript fetch error:", e);
+      console.error("Transcript fetch error via RapidAPI:", e);
       return NextResponse.json({ 
-        error: 'Could not fetch transcript for this video. It might not have closed captions enabled, or YouTube is blocking our request. Try another video.' 
+        error: 'Could not fetch transcript via RapidAPI. Check your RapidAPI key or usage limits.' 
       }, { status: 400 });
     }
 
-    const fullTranscript = transcriptItems.map(item => item.text).join(' ');
-    
     if (fullTranscript.length < 50) {
       return NextResponse.json({ error: 'Transcript is too short or empty.' }, { status: 400 });
     }

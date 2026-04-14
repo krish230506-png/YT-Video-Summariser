@@ -17,23 +17,41 @@ export async function POST(req) {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 
-    let transcriptItems = [];
+    if (!process.env.RAPIDAPI_KEY) {
+      return NextResponse.json({ error: 'RapidAPI Key is missing.' }, { status: 500 });
+    }
+
+    let fullTranscript = '';
     try {
-      // Extract video ID if it's a full URL
-      const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-      const targetId = videoIdMatch ? videoIdMatch[1] : url;
+      console.log(`Fetching transcript via RapidAPI for: ${url}`);
+      const options = {
+        method: 'GET',
+        headers: {
+          'x-rapidapi-key': process.env.RAPIDAPI_KEY,
+          'x-rapidapi-host': 'youtube-transcript3.p.rapidapi.com'
+        }
+      };
       
-      console.log(`Fetching transcript in chat for video ID: ${targetId}`);
-      transcriptItems = await YoutubeTranscript.fetchTranscript(targetId);
+      const res = await fetch(`https://youtube-transcript3.p.rapidapi.com/api/transcript-with-url?url=${encodeURIComponent(url)}&flat=true&lang=en`, options);
+      const data = await res.json();
+      
+      if (Array.isArray(data)) {
+        fullTranscript = data.map(item => item.text || item).join(' ');
+      } else if (data.transcript && Array.isArray(data.transcript)) {
+        fullTranscript = data.transcript.map(item => item.text || item.title || '').join(' ');
+      } else if (typeof data === 'string') {
+        fullTranscript = data;
+      } else {
+        fullTranscript = JSON.stringify(data); // Fallback
+      }
+
     } catch (e) {
-      console.error("Transcript fetch error (chat):", e);
+      console.error("Transcript fetch error via RapidAPI in chat:", e);
       return NextResponse.json({ 
-        error: 'Could not fetch transcript for this video to understand context. It might not have closed captions enabled.' 
+        error: 'Could not fetch transcript via RapidAPI to understand context.' 
       }, { status: 400 });
     }
 
-    const fullTranscript = transcriptItems.map(item => item.text).join(' ');
-    
     // Construct the context block
     let conversationStr = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
 
