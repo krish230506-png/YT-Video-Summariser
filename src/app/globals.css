@@ -257,3 +257,29 @@ p code { background: rgba(0,0,0,0.3); padding: 0.2rem 0.4rem; border-radius: 4px
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .hero h1 { font-size: 2rem; }
+  .hero p { font-size: 0.95rem; }
+  .container { padding: 1.5rem 1rem; }
+  .input-section { padding: 1.5rem 1rem; margin-bottom: 2rem; }
+  
+  .input-wrapper { flex-direction: column; gap: 0.8rem; }
+  .url-input, .lang-select, .submit-btn { width: 100%; min-width: 100%; }
+  
+  .video-container { position: relative; top: 0; padding: 1rem; margin-bottom: 1.5rem; }
+  .results-section { height: auto; min-height: 60vh; }
+  .dashboard { gap: 0; }
+  
+  .floating-chat-panel {
+    bottom: 5rem; right: 1rem; left: 1rem;
+    width: auto; max-width: none;
+    height: 65vh;
+  }
+  
+  .floating-chat-btn { bottom: 1.5rem; right: 1.5rem; width: 55px; height: 55px; font-size: 1.5rem; }
+  
+  .history-card { flex-direction: column; gap: 0.8rem; }
+  .history-thumb img { width: 100%; height: auto; aspect-ratio: 16/9; }
+}
