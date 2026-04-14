@@ -14,7 +14,8 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Gemini API Key is not configured on the server. Please add it to your .env.local file.' }, { status: 500 });
     }
     
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     let transcriptItems = [];
     try {
@@ -75,14 +76,16 @@ A maximum of 2 sentences boiling down the ultimate message.
 Transcript:
 ${fullTranscript.substring(0, 50000)}`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: prompt,
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
     
-    return NextResponse.json({ summary: response.text });
+    return NextResponse.json({ summary: text });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'An internal error occurred while generating the summary.' }, { status: 500 });
+    console.error("GENERATION ERROR:", error);
+    return NextResponse.json({ 
+      error: `An error occurred: ${error.message || 'Internal Server Error'}`,
+      details: error.stack 
+    }, { status: 500 });
   }
 }

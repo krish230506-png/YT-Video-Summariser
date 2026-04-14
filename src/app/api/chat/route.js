@@ -14,7 +14,8 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Gemini API Key is not configured on the server.' }, { status: 500 });
     }
     
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     let transcriptItems = [];
     try {
@@ -49,14 +50,13 @@ ${conversationStr}
 
 SYSTEM: Please answer the user's last message above appropriately as the MODEL. Provide helpful markdown formatting if needed. Do not include the "MODEL:" prefix in your response.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: prompt,
-    });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
     
-    return NextResponse.json({ reply: response.text });
+    return NextResponse.json({ reply: text });
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'An internal error occurred while generating the chat reply.' }, { status: 500 });
+    console.error("CHAT GENERATION ERROR:", error);
+    return NextResponse.json({ error: `An error occurred: ${error.message || 'Internal Server Error'}`, details: error.stack }, { status: 500 });
   }
 }
