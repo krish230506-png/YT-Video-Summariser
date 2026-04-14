@@ -18,9 +18,17 @@ export async function POST(req) {
 
     let transcriptItems = [];
     try {
-      transcriptItems = await YoutubeTranscript.fetchTranscript(url);
+      // Extract video ID if it's a full URL
+      const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      const targetId = videoIdMatch ? videoIdMatch[1] : url;
+      
+      console.log(`Fetching transcript for video ID: ${targetId}`);
+      transcriptItems = await YoutubeTranscript.fetchTranscript(targetId);
     } catch (e) {
-      return NextResponse.json({ error: 'Could not fetch transcript for this video. It might not have closed captions available.' }, { status: 400 });
+      console.error("Transcript fetch error:", e);
+      return NextResponse.json({ 
+        error: 'Could not fetch transcript for this video. It might not have closed captions enabled, or YouTube is blocking our request. Try another video.' 
+      }, { status: 400 });
     }
 
     const fullTranscript = transcriptItems.map(item => item.text).join(' ');
