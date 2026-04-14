@@ -23,24 +23,30 @@ export async function POST(req) {
 
     let fullTranscript = '';
     try {
-      console.log(`Fetching transcript via RapidAPI for: ${url}`);
+      // Extract video ID from URL
+      const videoIdMatch = url.match(/(?:v=|\/|embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      const targetId = videoIdMatch ? videoIdMatch[1] : url;
+
+      console.log(`Fetching transcript in chat via Spicy-Laika RapidAPI for: ${targetId}`);
       const options = {
         method: 'GET',
         headers: {
           'x-rapidapi-key': process.env.RAPIDAPI_KEY,
-          'x-rapidapi-host': 'youtube-transcript3.p.rapidapi.com'
+          'x-rapidapi-host': 'youtube-captions-transcript-subtitles-video-combiner.p.rapidapi.com'
         }
       };
       
-      const res = await fetch(`https://youtube-transcript3.p.rapidapi.com/api/transcript-with-url?url=${encodeURIComponent(url)}&flat=true&lang=en`, options);
+      const res = await fetch(`https://youtube-captions-transcript-subtitles-video-combiner.p.rapidapi.com/download-json/${targetId}?language=en&response_mode=default`, options);
       const data = await res.json();
       
+      // If RapidAPI gives us a subscription/quota error message, catch it clearly!
+      if (data.message && data.message.includes("subscribed")) {
+        return NextResponse.json({ error: 'RapidAPI Error: ' + data.message + ' Please ensure you are subscribed to the correct Spicy-Laika API on RapidAPI.' }, { status: 403 });
+      }
+
+      // Parse the new API's structure
       if (Array.isArray(data)) {
-        fullTranscript = data.map(item => item.text || item).join(' ');
-      } else if (data.transcript && Array.isArray(data.transcript)) {
-        fullTranscript = data.transcript.map(item => item.text || item.title || '').join(' ');
-      } else if (typeof data === 'string') {
-        fullTranscript = data;
+        fullTranscript = data.map(item => item.text).join(' ');
       } else {
         fullTranscript = JSON.stringify(data); // Fallback
       }
